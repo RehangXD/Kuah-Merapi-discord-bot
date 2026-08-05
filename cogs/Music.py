@@ -8,7 +8,6 @@ from collections import deque
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
-from Config import MODULE_TOGGLES
 
 load_dotenv()
 
@@ -23,18 +22,6 @@ class MusicCog(commands.Cog):
         self.LOOP_STATES = {}
         self.TEXT_CHANNELS = {}
         self.INACTIVITY_TIMERS = {}
-        self.module_name = "Music"
-
-        sp_id = os.getenv("SPOTIPY_CLIENT_ID")
-        sp_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
-
-        print(f"--- Pengecekan Spotify ---")
-        print(f"Client ID terbaca: {sp_id}")
-        
-        self.spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-            client_id=sp_id,
-            client_secret=sp_secret
-        ))
         
         self.spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
             client_id=os.getenv("SPOTIPY_CLIENT_ID"),
@@ -48,7 +35,6 @@ class MusicCog(commands.Cog):
                 track = self.spotify.track(url)
                 artist = track['artists'][0]['name']
                 title = track['name']
-                # Mengambil foto album Spotify
                 thumb = track['album']['images'][0]['url'] if track['album']['images'] else None
                 tracks_data.append({"query": f"{title} {artist}", "title": title, "thumb": thumb})
                 
@@ -67,8 +53,25 @@ class MusicCog(commands.Cog):
                         title = track['name']
                         thumb = track['album']['images'][0]['url'] if track['album']['images'] else None
                         tracks_data.append({"query": f"{title} {artist}", "title": title, "thumb": thumb})
+
+            elif "album" in url:
+                album_info = self.spotify.album(url)
+                thumb = album_info['images'][0]['url'] if album_info['images'] else None
+                
+                results = self.spotify.album_tracks(url)
+                tracks = results['items']
+                
+                while results['next']:
+                    results = self.spotify.next(results)
+                    tracks.extend(results['items'])
+                    
+                for track in tracks:
+                    artist = track['artists'][0]['name']
+                    title = track['name']
+                    tracks_data.append({"query": f"{title} {artist}", "title": title, "thumb": thumb})
+                    
         except Exception as e:
-            print(f"Spotify API Error: {e}")
+            print(f"[Spotify Error] {e}")
             
         return tracks_data
 
@@ -93,11 +96,11 @@ class MusicCog(commands.Cog):
         )
 
     async def _inactivity_countdown(self, guild_id, voice_client, channel, reason):
-        await asyncio.sleep(300)
+        await asyncio.sleep(180)
         if voice_client and voice_client.is_connected():
             await voice_client.disconnect()
             if channel:
-                embed = discord.Embed(description=f"Terputus dari voice channel. {reason}", color=discord.Color.red())
+                embed = discord.Embed(description=f"Disconnected from voice channel. {reason}", color=discord.Color.red())
                 await channel.send(embed=embed)
         
         self.LOOP_STATES[guild_id] = "off"
@@ -121,7 +124,7 @@ class MusicCog(commands.Cog):
 
         if len(humans) == 0:
             channel = self.TEXT_CHANNELS.get(guild_id)
-            self.start_inactivity_timer(guild_id, voice_client, channel, "Tidak ada orang di voice channel selama 3 menit.")
+            self.start_inactivity_timer(guild_id, voice_client, channel, "No users in the voice channel for 3 minutes.")
         else:
             if voice_client.is_playing() or voice_client.is_paused() or self.SONG_QUEUES.get(guild_id):
                 self.cancel_inactivity_timer(guild_id)
@@ -129,19 +132,18 @@ class MusicCog(commands.Cog):
     async def play_next_song(self, voice_client, guild_id, channel, current_song=None):
         loop_state = self.LOOP_STATES.get(guild_id, "off")
         
-        if current_song and loop_state == "all":
-            self.SONG_QUEUES[guild_id].append(current_song)
-            
+        # current_song format is (web_url, title, thumb)
         if loop_state == "single" and current_song:
             web_url, title, thumb = current_song
         elif self.SONG_QUEUES.get(guild_id):
             web_url, title, thumb = self.SONG_QUEUES[guild_id].popleft()
         else:
-            self.start_inactivity_timer(guild_id, voice_client, channel, "Antrean lagu habis.")
+            self.start_inactivity_timer(guild_id, voice_client, channel, "Queue is empty.")
             return
-        
+
+        # Fetch actual stream data just before playing (Lazy Load)
         ydl_option = {
-            "format": "bestaudio[abr<96]/bestaudio",
+            "format": "bestaudio/best",
             "noplaylist": True, 
             "quiet": True,
             "ignoreerrors": True,
@@ -151,40 +153,41 @@ class MusicCog(commands.Cog):
             loop = asyncio.get_running_loop()
             info = await loop.run_in_executor(None, _extract, web_url, ydl_option)
             
-            # Validasi jika video dihapus atau tidak tersedia
             if info is None:
-                raise Exception("Video tidak tersedia.")
+                raise Exception("Video is unavailable.")
             
             if 'entries' in info and info['entries']:
                 info = info['entries'][0]
                 
             stream_url = info.get('url')
             if not stream_url:
-                raise Exception("URL stream gagal diekstrak.")
+                raise Exception("Stream URL could not be extracted.")
                 
             title = info.get('title', title)
             thumb = info.get('thumbnail', thumb)
             
-            # Menyimpan data valid untuk fungsi pengulangan
+            # Save the original web URL so it can be re-fetched when looping
             valid_song = (web_url, title, thumb)
             
         except Exception as e:
-            print(f"Extraction error: {e}")
-            await channel.send(f"Melewati **{title}** karena video tidak tersedia.")
-            # Melompat ke lagu berikutnya dengan mengirim parameter None 
-            # agar lagu yang rusak tidak dimasukkan kembali ke antrean
+            print(f"[Queue Error] Extraction failed: {e}")
+            if channel:
+                await channel.send(f"⚠️ Skipping **{title}** (Video unavailable or restricted).")
             await self.play_next_song(voice_client, guild_id, channel, None)
             return
-        
-        # --- EMBED: SEDANG MEMUTAR ---
-        if loop_state != "single":
-            embed = discord.Embed(title="Sedang Memutar", description=f"**{title}**", color=discord.Color.blue())
+
+        # If loopall is active, push the metadata back to the end of the queue
+        if loop_state == "all":
+            self.SONG_QUEUES[guild_id].append(valid_song)
+            
+        if loop_state != "single" and channel:
+            embed = discord.Embed(title="🎶 Now Playing", description=f"**{title}**", color=discord.Color.blue())
             if thumb:
                 embed.set_thumbnail(url=thumb)
             asyncio.create_task(channel.send(embed=embed))
         
         ffmpeg_options = {
-            "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -headers \"{header_str}\"",
+            "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
             "options": "-vn",
         }
                 
@@ -192,9 +195,11 @@ class MusicCog(commands.Cog):
         
         def after_play(error):
             if error:
-                print(f"Error playing {title}: {error}")
-            # Menggunakan valid_song untuk mencegah error pada lagu yang rusak
-            asyncio.run_coroutine_threadsafe(self.play_next_song(voice_client, guild_id, channel, valid_song), self.bot.loop)
+                print(f"[Audio Error] Issue playing {title}: {error}")
+            try:
+                self.bot.loop.create_task(self.play_next_song(voice_client, guild_id, channel, valid_song))
+            except Exception as e:
+                print(f"[System Error] Failed to schedule next song: {e}")
         
         voice_client.play(source, after=after_play)
 
@@ -222,15 +227,15 @@ class MusicCog(commands.Cog):
             self.SONG_QUEUES[guild_id] = deque()
 
         is_spotify = "spotify.com" in query
-        is_link = query.startswith("http://") or query.startswith("https://")
+        is_link = "http://" in query or "https://" in query or "www." in query
 
+        # THE FIX: Using "in_playlist" forces yt-dlp to correctly output the array of songs
+        # when dealing with a combined watch?v=...&list=... URL.
         ydl_option = {
-            "format": "bestaudio[abr<96]/bestaudio",
+            "extract_flat": "in_playlist",
             "noplaylist": False,
-            "youtube_include_dash_manifest": False,
-            "youtube_include_hls_manifest": False,
-            "extract_flat": True,
             "ignoreerrors": True,
+            "playlistend": 150 # Max limit of playlist songs to extract
         }
 
         if is_spotify:
@@ -238,36 +243,14 @@ class MusicCog(commands.Cog):
             if not tracks:
                 await ctx.send("Could not extract tracks from the provided Spotify link.")
                 return
-                
-            first_track = tracks[0]
-            first_query = f"ytsearch1:{first_track['query']}"
-            try:
-                results = await self.search_ytdlp_async(first_query, ydl_option)
-                if results and "entries" in results and results["entries"]:
-                    entry = results["entries"][0]
-                    audio_url = entry.get("url") or entry.get("webpage_url")
-                    title = entry.get("title", first_track['title'])
-                    thumb = entry.get("thumbnail", first_track['thumb'])
-                    self.SONG_QUEUES[guild_id].append((audio_url, title, thumb))
-                else:
-                    self.SONG_QUEUES[guild_id].append((first_query, first_track['title'], first_track['thumb']))
-            except Exception:
-                self.SONG_QUEUES[guild_id].append((first_query, first_track['title'], first_track['thumb']))
-
-            for t in tracks[1:]:
+            
+            for t in tracks:
                 self.SONG_QUEUES[guild_id].append((f"ytsearch1:{t['query']}", t['title'], t['thumb']))
                 
-            # --- EMBED: SPOTIFY ADDED ---
-            if len(tracks) > 1:
-                embed = discord.Embed(title="Spotify Playlist Ditambahkan", description=f"Menambahkan **{len(tracks)}** lagu ke antrean.", color=discord.Color.green())
-                if first_track['thumb']:
-                    embed.set_thumbnail(url=first_track['thumb'])
-                await ctx.send(embed=embed)
-            else:
-                embed = discord.Embed(title="Menambahkan ke Antrean", description=f"**{first_track['title']}**", color=discord.Color.green())
-                if first_track['thumb']:
-                    embed.set_thumbnail(url=first_track['thumb'])
-                await ctx.send(embed=embed)
+            embed = discord.Embed(title="Spotify Added", description=f"Added **{len(tracks)}** tracks to the queue.", color=discord.Color.green())
+            if tracks[0]['thumb']:
+                embed.set_thumbnail(url=tracks[0]['thumb'])
+            await ctx.send(embed=embed)
 
         else:
             search_query = query if is_link else f"ytsearch1:{query}"
@@ -282,39 +265,56 @@ class MusicCog(commands.Cog):
                 await ctx.send("No results found.")
                 return
         
+            added_count = 0
+            first_thumb = None
+            
             if "entries" in results:
-                entries = results["entries"]
-                if not is_link:
+                entries = list(results["entries"])
+                
+                # If it's a search term (not a playlist link), only queue the top result
+                if not is_link and len(entries) > 0:
                     entries = [entries[0]]
                     
                 for entry in entries:
-                    audio_url = entry.get("url") or entry.get("webpage_url")
-                    title = entry.get("title", "Untitled")
-                    thumb = entry.get("thumbnail")
-                    self.SONG_QUEUES[guild_id].append((audio_url, title, thumb))
-        
-                # --- EMBED: YOUTUBE PLAYLIST ADDED ---
-                if len(entries) > 1:
-                    embed = discord.Embed(title="Playlist Ditambahkan", description=f"Menambahkan **{len(entries)}** lagu ke antrean.", color=discord.Color.green())
-                    if entries[0].get("thumbnail"):
-                        embed.set_thumbnail(url=entries[0].get("thumbnail"))
-                    await ctx.send(embed=embed)
-                else:
-                    embed = discord.Embed(title="Menambahkan ke Antrean", description=f"**{entries[0].get('title', 'Untitled')}**", color=discord.Color.green())
-                    if entries[0].get("thumbnail"):
-                        embed.set_thumbnail(url=entries[0].get("thumbnail"))
-                    await ctx.send(embed=embed)
+                    if entry:
+                        web_url = entry.get("url") or entry.get("webpage_url") or entry.get("id")
+                        
+                        # Safety fix: yt-dlp flat extraction sometimes returns only the video ID 
+                        # instead of the full URL. We must convert it to a full link.
+                        if web_url and not web_url.startswith("http"):
+                            web_url = f"https://www.youtube.com/watch?v={web_url}"
+                            
+                        title = entry.get("title", "Untitled")
+                        
+                        thumb = None
+                        if entry.get("thumbnails"):
+                            thumb = entry["thumbnails"][0].get("url")
+                        elif entry.get("thumbnail"):
+                            thumb = entry.get("thumbnail")
+                            
+                        if added_count == 0:
+                            first_thumb = thumb
+                            
+                        self.SONG_QUEUES[guild_id].append((web_url, title, thumb))
+                        added_count += 1
             else:
-                audio_url = results.get("url") or results.get("webpage_url")
+                web_url = results.get("url") or results.get("webpage_url") or results.get("id")
+                if web_url and not web_url.startswith("http"):
+                    web_url = f"https://www.youtube.com/watch?v={web_url}"
+                    
                 title = results.get("title", "Untitled")
                 thumb = results.get("thumbnail")
-                self.SONG_QUEUES[guild_id].append((audio_url, title, thumb))
+                first_thumb = thumb
+                self.SONG_QUEUES[guild_id].append((web_url, title, thumb))
+                added_count = 1
                 
-                # --- EMBED: YOUTUBE SINGLE ADDED ---
-                embed = discord.Embed(title="Menambahkan ke Antrean", description=f"**{title}**", color=discord.Color.green())
-                if thumb:
-                    embed.set_thumbnail(url=thumb)
+            if added_count > 0:
+                embed = discord.Embed(title="Added to Queue", description=f"Queued **{added_count}** track(s).", color=discord.Color.green())
+                if first_thumb:
+                    embed.set_thumbnail(url=first_thumb)
                 await ctx.send(embed=embed)
+            else:
+                await ctx.send("No valid tracks could be extracted.")
     
         if not voice_client.is_playing() and not voice_client.is_paused():
             await self.play_next_song(voice_client, guild_id, ctx.channel)
@@ -324,36 +324,36 @@ class MusicCog(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client and (voice_client.is_playing() or voice_client.is_paused()):
             guild_id = str(ctx.guild.id)
-            
-            # Matikan single loop sementara jika user memaksa skip
             if self.LOOP_STATES.get(guild_id) == "single":
                 self.LOOP_STATES[guild_id] = "off"
-                await ctx.send("⏩ Melewati lagu... *(Mode loop 1 lagu dimatikan otomatis)*")
+                await ctx.send("⏩ Skipped. Single loop mode automatically disabled.")
             else:
-                await ctx.send("⏩ Melewati lagu... *(Memuat lagu selanjutnya)*")
+                await ctx.send("⏩ Skipped. Loading next track...")
                 
-            # Menghentikan pemutaran memicu bot untuk langsung membaca antrean berikutnya
+            if voice_client.is_paused():
+                voice_client.resume()
+                
             voice_client.stop()
         else:
-            await ctx.send("Tidak ada lagu yang sedang diputar.")
+            await ctx.send("There is no song currently playing.")
     
     @commands.hybrid_command(name="pause", description="Pause the current song.")
     async def pause(self, ctx: commands.Context):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing():
             voice_client.pause()
-            await ctx.send("⏸️ Musik dijeda.")
+            await ctx.send("⏸️ Music paused.")
         else:
-            await ctx.send("Tidak ada musik yang sedang diputar.")
+            await ctx.send("There is no song currently playing.")
     
     @commands.hybrid_command(name="resume", description="Resume a paused song.")
     async def resume(self, ctx: commands.Context):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_paused():
             voice_client.resume()
-            await ctx.send("▶️ Musik dilanjutkan.")
+            await ctx.send("▶️ Music resumed.")
         else:
-            await ctx.send("Musik tidak sedang dijeda.")
+            await ctx.send("The music is not paused.")
     
     @commands.hybrid_command(name="stop", description="Stop the music and clear the queue.")
     async def stop(self, ctx: commands.Context):
@@ -368,9 +368,9 @@ class MusicCog(commands.Cog):
             
             voice_client.stop()
             await voice_client.disconnect()
-            await ctx.send("⏹️ Musik dihentikan dan antrean dibersihkan.")
+            await ctx.send("⏹️ Music stopped and queue cleared.")
         else:
-            await ctx.send("Saya tidak berada di voice channel.")
+            await ctx.send("I am not connected to a voice channel.")
     
     @commands.hybrid_command(name="loop", description="Toggle looping for the current song.")
     async def loop(self, ctx: commands.Context):
@@ -379,10 +379,10 @@ class MusicCog(commands.Cog):
         
         if current_state == "single":
             self.LOOP_STATES[guild_id] = "off"
-            await ctx.send("➡️ Pengulangan 1 lagu dimatikan.")
+            await ctx.send("➡️ Single track loop disabled.")
         else:
             self.LOOP_STATES[guild_id] = "single"
-            await ctx.send("🔂 Pengulangan 1 lagu diaktifkan.")
+            await ctx.send("🔂 Single track loop enabled.")
             
     @commands.hybrid_command(name="loopall", description="Toggle looping for the entire queue.")
     async def loopall(self, ctx: commands.Context):
@@ -391,15 +391,10 @@ class MusicCog(commands.Cog):
         
         if current_state == "all":
             self.LOOP_STATES[guild_id] = "off"
-            await ctx.send("➡️ Pengulangan seluruh antrean dimatikan.")
+            await ctx.send("➡️ Queue loop disabled.")
         else:
             self.LOOP_STATES[guild_id] = "all"
-            await ctx.send("🔁 Pengulangan seluruh antrean diaktifkan.")
-
-        @commands.Cog.listener()
-        async def on_message(self, message):
-            if not MODULE_TOGGLES.get(self.module_name, True):
-                return
+            await ctx.send("🔁 Queue loop enabled.")
 
 async def setup(bot):
     await bot.add_cog(MusicCog(bot))
