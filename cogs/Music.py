@@ -8,6 +8,7 @@ from collections import deque
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
+from Config import MODULE_TOGGLES
 
 load_dotenv()
 
@@ -18,6 +19,7 @@ def _extract(query, ydl_opts):
 class MusicCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.module_name = "Music"
         self.SONG_QUEUES = {}
         self.LOOP_STATES = {}
         self.TEXT_CHANNELS = {}
@@ -395,6 +397,11 @@ class MusicCog(commands.Cog):
         else:
             self.LOOP_STATES[guild_id] = "all"
             await ctx.send("🔁 Queue loop enabled.")
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+            if not MODULE_TOGGLES.get(self.module_name, True):
+                return
 
 async def setup(bot):
     await bot.add_cog(MusicCog(bot))
