@@ -1,10 +1,10 @@
-# [Name of Your Bot]
+# [Kuah Merapi]
 
 A multi-purpose Discord bot built with `discord.py` that handles music, and server utilities.
 
 ## Features
 *   **Music:** Supports YouTube and Spotify links, queue management, looping (single/all), and playlist support.
-*   **Greetings:** Automated welcome/leave messages for your server.
+*   **Greetings:** Automated messages trigger for your server.
 *   **Utilities:** Random tools and module-based configuration (Toggle features on/off easily).
 
 ## Prerequisites
@@ -25,13 +25,13 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
 
 
 
-**Install dependencies:**
+# **Install dependencies:**
 
 Bash
 pip install -r requirements.txt
 
 
-**Create a .env file in the root folder and add your credentials:**
+# **Create a .env file in the root folder and add your credentials:**
 
 *inside the .env file*
 DISCORD_TOKEN=your_token_here
@@ -39,13 +39,13 @@ SPOTIPY_CLIENT_ID=your_id
 SPOTIPY_CLIENT_SECRET=your_secret
 
 
-**Run the bot:**
+# **Run the bot:**
 
 Bash
 python main.py
 
 
-**Configuration**
+# **Configuration**
 You can toggle modules on or off by editing Config.py:
 
 cogs.Music: True/False
@@ -53,13 +53,9 @@ cogs.greeting: True/False
 etc...
 
 
-**Security Warning**
+# **Security Warning**
 Never share your DISCORD_TOKEN or .env file. If you accidentally push your token to GitHub, reset it immediately in the Discord Developer Portal.
 
 
-**License**
-<<<<<<< HEAD
+# **License**
 [Choose a license, e.g., MIT]
-=======
-[Choose a license, e.g., MIT]
->>>>>>> b746b46dac424ec419ab9983e43b8aa33a6d2769
