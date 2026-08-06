@@ -13,7 +13,6 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
 *   yt_dlp  (required for fetch music ID in yt)
 *   spotipy (required for fetch music in Spotify (required Premium Spotify to work))
 *   PyNaCl  (required to function)
-*   deno    (if needed)
 
 ## Installation
 
