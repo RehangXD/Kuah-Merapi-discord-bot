@@ -8,6 +8,7 @@ from collections import deque
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 from Config import MODULE_TOGGLES
 
 load_dotenv()
@@ -228,7 +229,8 @@ class MusicCog(commands.Cog):
         if self.SONG_QUEUES.get(guild_id) is None:
             self.SONG_QUEUES[guild_id] = deque()
 
-        is_spotify = "spotify.com" in query
+        parsed_url = urlparse(query)
+        is_spotify = parsed_url.hostname in ["spotify.com", "open.spotify.com"]
         is_link = "http://" in query or "https://" in query or "www." in query
 
         # THE FIX: Using "in_playlist" forces yt-dlp to correctly output the array of songs
