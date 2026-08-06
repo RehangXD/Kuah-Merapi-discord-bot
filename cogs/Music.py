@@ -403,5 +403,8 @@ class MusicCog(commands.Cog):
             if not MODULE_TOGGLES.get(self.module_name, True):
                 return
 
+            if message.author.bot:
+                  return
+
 async def setup(bot):
     await bot.add_cog(MusicCog(bot))
