@@ -25,32 +25,32 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
 
 
 
-## Install dependencies:
+## Install dependencies
 
-Bash
+**Bash**  
 pip install -r requirements.txt
 
 
-## Create a .env file in the root folder and add your credentials:
+## Create a .env file in the root folder and add your credentials
 
-*inside the .env file*
-DISCORD_TOKEN=your_token_here
-SPOTIPY_CLIENT_ID=your_id
-SPOTIPY_CLIENT_SECRET=your_secret
+*inside the .env file*  
+DISCORD_TOKEN=your_token_here  
+SPOTIPY_CLIENT_ID=your_id  
+SPOTIPY_CLIENT_SECRET=your_secret  
 
 
-## Run the bot:
+## Run the bot
 
-Bash
+**Bash**  
 python main.py
 
 
 ## Configuration
 You can toggle modules on or off by editing Config.py:
 
-cogs.Music: True/False
-cogs.greeting: True/False
-etc...
+cogs.Music: True/False  
+cogs.greeting: True/False  
+etc...  
 
 
 ## Security Warning
