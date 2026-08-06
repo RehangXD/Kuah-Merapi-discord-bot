@@ -120,10 +120,10 @@ class GreetingCog(commands.Cog):
     if message.author.bot:
       return
 
-    content = message.content.lower().strip()
+    content = message.content.strip()
 
     for category, triggers in self.trigger_map.items():
-      if any(content == t or content.startswith(t + " ") for t in triggers):
+      if content in triggers:
         response = random.choice(self.greeting_map[category])
         await message.reply(response)
         break
