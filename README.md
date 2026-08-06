@@ -30,7 +30,7 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
 pip install -r requirements.txt
 
 
-## Create a .env file in the root folder and add your credentials
+## Create or Edit a .env file in the root folder and add your credentials
 
 *inside the .env file*  
 
