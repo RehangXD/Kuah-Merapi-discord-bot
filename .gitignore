@@ -1,1 +1,5 @@
 main.py
+.gitignore
+Ollama38.py
+.env
+__pycache__
