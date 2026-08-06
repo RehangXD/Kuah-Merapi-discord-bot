@@ -3,3 +3,7 @@ main.py
 Ollama38.py
 .env
 __pycache__/
+__pycache__/Greeting.cpython-314.pyc
+__pycache__/Music.cpython-314.pyc
+__pycache__/Ollama38.cpython-314.pyc
+__pycache__/Random.cpython-314.pyc
