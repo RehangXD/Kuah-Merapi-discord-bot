@@ -58,4 +58,4 @@ Never share your DISCORD_TOKEN or .env file. If you accidentally push your token
 
 
 ## License
-[Choose a license, e.g., MIT]
+[e.g., MIT]
