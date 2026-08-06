@@ -2,10 +2,11 @@ import os
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from Config import MODULE_TOGGLES
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-MY_GUILD = discord.Object(id=#Your server id)
+MY_GUILD = discord.Object(id=763868387607969823)
 
 # SWITCH MODE TESTING:
 # Change into True if you wanna edit your new feature (just change in test server).
@@ -23,10 +24,15 @@ class MyBot(commands.Bot):
         )
 
     async def setup_hook(self):
-        await self.load_extension("cogs.Music")
-        await self.load_extension("cogs.Random")
-        await self.load_extension("cogs.Ollama38")
-        await self.load_extension("cogs.Greeting")
+        for module_name, is_enabled in MODULE_TOGGLES.items():
+            if is_enabled:
+                try:
+                    await self.load_extension(module_name)
+                    print(f"Loaded module: {module_name}")
+                except Exception as e:
+                    print(f"Failed to load {module_name}: {e}")
+            else:
+                print(f"Skipped module: {module_name} (Disabled)")
         
         if TESTING_MODE:
             print("🔧 Testing Mode Active: Synchronization Into Test Server...")
@@ -54,22 +60,32 @@ async def on_ready():
 async def reload(interaction: discord.Interaction):
     await interaction.response.defer()
     
-    cogs_to_reload = ["cogs.Random", "cogs.Music", "cogs.Ollama38", "cogs.Greeting"]
     success_messages = []
     
-    for cog in cogs_to_reload:
-        try:
-            await bot.reload_extension(cog)
-            success_messages.append(f"reloaded `{cog}`")
-        except discord.ext.commands.ExtensionNotLoaded:
+    for cog, is_enabled in MODULE_TOGGLES.items():
+        if is_enabled:
             try:
-                await bot.load_extension(cog)
-                success_messages.append(f"loaded `{cog}` (was not active)")
+                await bot.reload_extension(cog)
+                success_messages.append(f"reloaded `{cog}`")
+            except discord.ext.commands.ExtensionNotLoaded:
+                try:
+                    await bot.load_extension(cog)
+                    success_messages.append(f"loaded `{cog}` (was not active)")
+                except Exception as e:
+                    success_messages.append(f"failed to load `{cog}`: {e}")
             except Exception as e:
-                success_messages.append(f"failed to load `{cog}`: {e}")
-        except Exception as e:
-            success_messages.append(f"error on `{cog}`: {e}")
+                success_messages.append(f"error on `{cog}`: {e}")
+        else:
+            try:
+                await bot.unload_extension(cog)
+                success_messages.append(f"unloaded '{cog}': (disabled in config)")
+            except discord.ext.commands.ExtensionNotLoaded:
+                pass
+
+    if not success_messages:
+        success_messages.append(f"No config items processed.")
             
     await interaction.followup.send(" | ".join(success_messages))
 
-bot.run(TOKEN)
+if __name__ == "__main__":
+    bot.run(TOKEN)
