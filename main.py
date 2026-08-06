@@ -6,7 +6,7 @@ from Config import MODULE_TOGGLES
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-MY_GUILD = discord.Object(id=763868387607969823)
+MY_GUILD = discord.Object(id=#your server id)
 
 # SWITCH MODE TESTING:
 # Change into True if you wanna edit your new feature (just change in test server).

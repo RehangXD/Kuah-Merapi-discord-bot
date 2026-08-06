@@ -65,6 +65,8 @@ class OllamaCog(commands.Cog):
     async def on_message(self, message):
         if not MODULE_TOGGLES.get(self.module_name, True):
             return
+        if message.author.bot:
+            return
 
 async def setup(bot):
     await bot.add_cog(OllamaCog(bot))
