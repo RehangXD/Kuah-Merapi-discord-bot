@@ -43,7 +43,6 @@ class MyBot(commands.Bot):
             await self.tree.sync(guild=MY_GUILD)
             
         else:
-
             print("🌍 Global Mode Active: Synchronization Into Global Server...")
             self.tree.clear_commands(guild=MY_GUILD)
             await self.tree.sync(guild=MY_GUILD)
