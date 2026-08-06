@@ -34,6 +34,7 @@ pip install -r requirements.txt
 ## Create a .env file in the root folder and add your credentials
 
 *inside the .env file*  
+'''env
 DISCORD_TOKEN=your_token_here  
 SPOTIPY_CLIENT_ID=your_id  
 SPOTIPY_CLIENT_SECRET=your_secret  
