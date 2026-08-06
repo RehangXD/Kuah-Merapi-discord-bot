@@ -24,8 +24,9 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
 2. Virtual Environment Setup Instructions
     *   **Create the virtual environment**
         Execute the following command in the project's root directory to generate a folder named venv:
-        ```
+        
         *Bash*
+        ```
         python -m venv venv #at the very end of this code(venv) is your folder name
         ```
 
@@ -34,29 +35,33 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
         The activation command depends on the operating system:
 
         **Windows (Command Prompt)**
+        
+        *DOS*
         ```
-        **DOS**
         venv\Scripts\activate.bat
         ```
 
         **Windows (PowerShell)**
+        
+        *PowerShell*
         ```
-        **PowerShell**
         venv\Scripts\Activate.ps1
         ```
 
         **macOS and Linux**
+        
+        *Bash*
         ```
-        **Bash**
         source venv/bin/activate
         ```
 
 
 ## Install dependencies
 
-**Bash**  
+**Bash**
+``` 
 pip install -r requirements.txt
-
+```
 
 ## Create or Edit a .env file in the root folder and add your credentials
 
@@ -69,9 +74,10 @@ SPOTIPY_CLIENT_SECRET=your_secret
 
 ## Run the bot
 
-**Bash**  
+**Bash**
+```
 python main.py
-
+```
 
 ## Configuration
 You can toggle modules on or off by editing Config.py:
