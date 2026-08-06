@@ -21,7 +21,35 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
    git clone [https://github.com/RehangXD/basic-discord-bot.git](https://github.com/RehangXD/basic-discord-bot.git)
    cd basic-discord-bot
 
+2. Virtual Environment Setup Instructions
+    *   **Create the virtual environment**
+        Execute the following command in the project's root directory to generate a folder named venv:
+        ```
+        *Bash*
+        python -m venv venv #at the very end of this code(venv) is your folder name
+        ```
 
+
+    *   **Activate the virtual environment**
+        The activation command depends on the operating system:
+
+        **Windows (Command Prompt)**
+        ```
+        **DOS**
+        venv\Scripts\activate.bat
+        ```
+
+        **Windows (PowerShell)**
+        ```
+        **PowerShell**
+        venv\Scripts\Activate.ps1
+        ```
+
+        **macOS and Linux**
+        ```
+        **Bash**
+        source venv/bin/activate
+        ```
 
 
 ## Install dependencies
