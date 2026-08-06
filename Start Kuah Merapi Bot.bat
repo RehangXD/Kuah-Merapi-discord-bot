@@ -3,7 +3,7 @@ title Bot Discord - Kuah Merapi
 color 0a
 
 echo Menyalakan Bot...
-cd /d "C:\Users\RehangXD\Music\DiscordBot"
+cd /d "C:\Users\dll"
 
 echo Mengaktifkan Virtual Environment...
 call dc_env\Scripts\activate.bat
