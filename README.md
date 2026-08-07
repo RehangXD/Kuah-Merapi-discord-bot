@@ -4,9 +4,9 @@ A multi-purpose Discord bot built with `discord.py` that handles music, and serv
 
 ## Features
 *   **Music:** Supports YouTube and Spotify links, queue management, looping (single/all), and playlist support.
-![Image 1](https://github.com/user-attachments/assets/222840fa-b8a6-4bc8-b2db-3067ffbf34ff)
+![Image](https://github.com/user-attachments/assets/222840fa-b8a6-4bc8-b2db-3067ffbf34ff)
 *   **Greetings:** Automated messages trigger for your server.
-![Image 2](https://github.com/user-attachments/assets/2e53e3bb-bf81-4a12-98aa-1578771afff2)
+![Image](https://github.com/user-attachments/assets/2e53e3bb-bf81-4a12-98aa-1578771afff2)
 *   **Utilities:** Random tools and module-based configuration (Toggle features on/off easily).
 
 ## Prerequisites
