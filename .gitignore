@@ -4,6 +4,7 @@ Start Kuah Merapi Bot.bat
 cookies.txt
 Ollama38.py
 .env
+bin/
 __pycache__/
 __pycache__/Greeting.cpython-314.pyc
 __pycache__/Music.cpython-314.pyc
