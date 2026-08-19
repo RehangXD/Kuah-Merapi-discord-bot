@@ -150,6 +150,11 @@ class MusicCog(commands.Cog):
             "noplaylist": True, 
             "quiet": True,
             "ignoreerrors": True,
+            "cookiefile": "cookies.txt",
+            "source_address": "0.0.0.0",
+            "extractor_args": {
+                "youtube": ['player_client=android']
+            }
         }
             
         try:
