@@ -127,7 +127,7 @@ class MusicCog(commands.Cog):
 
         if len(humans) == 0:
             channel = self.TEXT_CHANNELS.get(guild_id)
-            self.start_inactivity_timer(guild_id, voice_client, channel, "No users in the voice channel for 3 minutes.")
+            self.start_inactivity_timer(guild_id, voice_client, channel, "No users in the voice channel for 5 minutes.")
         else:
             if voice_client.is_playing() or voice_client.is_paused() or self.SONG_QUEUES.get(guild_id):
                 self.cancel_inactivity_timer(guild_id)
@@ -150,11 +150,7 @@ class MusicCog(commands.Cog):
             "noplaylist": True, 
             "quiet": True,
             "ignoreerrors": True,
-            "cookiefile": "cookies.txt",
-            "source_address": "0.0.0.0",
-            "extractor_args": {
-                "youtube": ['player_client=android']
-            }
+            "nocheckcertificate": True,
         }
             
         try:
@@ -199,7 +195,7 @@ class MusicCog(commands.Cog):
             "options": "-vn",
         }
                 
-        source = discord.FFmpegPCMAudio(stream_url, **ffmpeg_options, executable="bin\\ffmpeg\\ffmpeg.exe")
+        source = discord.FFmpegPCMAudio(stream_url, **ffmpeg_options, executable="C:/Users/RehangXD/Music/DiscordBot/bin/ffmpeg/ffmpeg.exe")
         
         def after_play(error):
             if error:
