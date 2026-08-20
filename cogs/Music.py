@@ -133,6 +133,14 @@ class MusicCog(commands.Cog):
                 self.cancel_inactivity_timer(guild_id)
 
     async def play_next_song(self, voice_client, guild_id, channel, current_song=None):
+        if not hasattr(self, 'is_processing'):
+            self.is_processing = {}
+
+        if self.is_processing.get(guild_id, False):
+            return
+
+        self.is_processing[guild_id] = True
+        
         loop_state = self.LOOP_STATES.get(guild_id, "off")
         
         # current_song format is (web_url, title, thumb)
@@ -141,6 +149,7 @@ class MusicCog(commands.Cog):
         elif self.SONG_QUEUES.get(guild_id):
             web_url, title, thumb = self.SONG_QUEUES[guild_id].popleft()
         else:
+            self.bot.loop.create_task(channel.send("👀 **Queue is empty**"))
             self.start_inactivity_timer(guild_id, voice_client, channel, "Queue is empty.")
             return
 
@@ -177,7 +186,7 @@ class MusicCog(commands.Cog):
             print(f"[Queue Error] Extraction failed: {e}")
             if channel:
                 await channel.send(f"⚠️ Skipping **{title}** (Video unavailable or restricted).")
-            await self.play_next_song(voice_client, guild_id, channel, None)
+            self.bot.loop.create_task(self.play_next_song(voice_client, guild_id, channel, None))
             return
 
         # If loopall is active, push the metadata back to the end of the queue
@@ -331,34 +340,60 @@ class MusicCog(commands.Cog):
             guild_id = str(ctx.guild.id)
             if self.LOOP_STATES.get(guild_id) == "single":
                 self.LOOP_STATES[guild_id] = "off"
-                await ctx.send("⏩ Skipped. Single loop mode automatically disabled.")
+                description_skip = "⏩ Skipped. Single loop mode automatically disabled."
             else:
-                await ctx.send("⏩ Skipped. Loading next track...")
+                description_skip = "⏩ Skipped. Loading next track..."
+            embed = discord.Embed(
+                title="Track Skipped",
+                description=description_skip,
+                color=discord.Color.green()
+            )
+            await ctx.send(embed=embed)
                 
             if voice_client.is_paused():
                 voice_client.resume()
                 
             voice_client.stop()
         else:
-            await ctx.send("There is no song currently playing.")
+            embed = discord.Embed(
+                description="There is no song currently playing.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
     
     @commands.hybrid_command(name="pause", description="Pause the current song.")
     async def pause(self, ctx: commands.Context):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing():
             voice_client.pause()
-            await ctx.send("⏸️ Music paused.")
+            embed = discord.Embed(
+                description="⏸️ Music paused.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
         else:
-            await ctx.send("There is no song currently playing.")
+            embed = discord.Embed(
+                description="There is no song currently playing.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
     
     @commands.hybrid_command(name="resume", description="Resume a paused song.")
     async def resume(self, ctx: commands.Context):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_paused():
             voice_client.resume()
-            await ctx.send("▶️ Music resumed.")
+            embed = discord.Embed(
+                description="▶️ Music resumed.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
         else:
-            await ctx.send("The music is not paused.")
+            embed = discord.Embed(
+                description="The music is not paused.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
     
     @commands.hybrid_command(name="stop", description="Stop the music and clear the queue.")
     async def stop(self, ctx: commands.Context):
@@ -370,12 +405,23 @@ class MusicCog(commands.Cog):
                 self.SONG_QUEUES[guild_id].clear()
             self.LOOP_STATES[guild_id] = "off"
             self.cancel_inactivity_timer(guild_id)
+
+            if voice_client.is_playing() or voice_client.is_paused():
+                voice_client.stop()
             
             voice_client.stop()
             await voice_client.disconnect()
-            await ctx.send("⏹️ Music stopped and queue cleared.")
+            embed = discord.Embed(
+                description="⏹️ Music stopped and queue cleared.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
         else:
-            await ctx.send("I am not connected to a voice channel.")
+            embed = discord.Embed(
+                description="I am not connected to a voice channel.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
     
     @commands.hybrid_command(name="loop", description="Toggle looping for the current song.")
     async def loop(self, ctx: commands.Context):
@@ -384,10 +430,18 @@ class MusicCog(commands.Cog):
         
         if current_state == "single":
             self.LOOP_STATES[guild_id] = "off"
-            await ctx.send("➡️ Single track loop disabled.")
+            embed = discord.Embed(
+                description="➡️ Single track loop disabled.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
         else:
             self.LOOP_STATES[guild_id] = "single"
-            await ctx.send("🔂 Single track loop enabled.")
+            embed = discord.Embed(
+                description="🔂 Single track loop enabled.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
             
     @commands.hybrid_command(name="loopall", description="Toggle looping for the entire queue.")
     async def loopall(self, ctx: commands.Context):
@@ -396,10 +450,18 @@ class MusicCog(commands.Cog):
         
         if current_state == "all":
             self.LOOP_STATES[guild_id] = "off"
-            await ctx.send("➡️ Queue loop disabled.")
+            embed = discord.Embed(
+                description="➡️ Queue loop disabled.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
         else:
             self.LOOP_STATES[guild_id] = "all"
-            await ctx.send("🔁 Queue loop enabled.")
+            embed = discord.Embed(
+                description="🔁 Queue loop enabled.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_message(self, message):
