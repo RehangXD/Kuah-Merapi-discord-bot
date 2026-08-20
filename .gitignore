@@ -4,11 +4,6 @@ Start Kuah Merapi Bot.bat
 cookies.txt
 Ollama38.py
 .env
-bin/
-bin/ffmpeg
-bin/ffmpeg/ffprobe.exe
-bin/ffmpeg/ffmpeg.exe
-bin/ffmpeg/ffplay.exe
 __pycache__/
 __pycache__/Greeting.cpython-314.pyc
 __pycache__/Music.cpython-314.pyc
