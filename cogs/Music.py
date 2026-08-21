@@ -333,7 +333,7 @@ class MusicCog(commands.Cog):
             else:
                 await ctx.send("No valid tracks could be extracted.")
     
-        if not voice_client.is_playing() and not voice_client.is_paused() and len(self.SONG_QUEUE[guild_id]) > 0:
+        if not voice_client.is_playing() and not voice_client.is_paused() and len(self.SONG_QUEUES[guild_id]) > 0:
             await self.play_next_song(voice_client, guild_id, ctx.channel)
             
     @commands.hybrid_command(name="skip", description="Skip the current playing song.")
