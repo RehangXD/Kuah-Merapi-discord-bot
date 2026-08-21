@@ -25,6 +25,8 @@ class MusicCog(commands.Cog):
         self.LOOP_STATES = {}
         self.TEXT_CHANNELS = {}
         self.INACTIVITY_TIMERS = {}
+        self.is_processing = {}
+        self.is_stopping = {}
         
         self.spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
             client_id=os.getenv("SPOTIPY_CLIENT_ID"),
@@ -132,24 +134,60 @@ class MusicCog(commands.Cog):
             if voice_client.is_playing() or voice_client.is_paused() or self.SONG_QUEUES.get(guild_id):
                 self.cancel_inactivity_timer(guild_id)
 
-    async def play_next_song(self, voice_client, guild_id, channel, current_song=None):
-        if not hasattr(self, 'is_processing'):
-            self.is_processing = {}
+    async def prefetch_next_song(self, guild_id):
+        if self.SONG_QUEUES.get(guild_id) and len(self.SONG_QUEUES[guild_id]) > 0:
+            first_item = self.SONG_QUEUES[guild_id][0]
+            if len(first_item) == 3:
+                web_url, title, tumb = first_item
+                ydl_option = {
+                    "format": "bestaudio/best",
+                    "noplaylist": True,
+                    "quiet": True,
+                    "ignoreerrors": True,
+                    "nocheckcertificate": True,
+                    "no_warnings": True,
+                    "skip_download": True,
+                }
+                try:
+                    loop =asyncio.get_running_loop()
+                    info =await loop.run_in_executor(None, _extract, web_url,ydl_option)
+                    if info and 'entries' in info and info['entries']:
+                        info = info['entries'][0]
+                    stream_url = info.get('url') if info else None
+                    if stream_url and len(self.SONG_QUEUES[guild_id]) > 0 and self.SONG_QUEUES[guild_id][0][0] == web_url:
+                        self.SONG_QUEUES[guild_id][0] = (web_url, title, thumb, stream_url)
+                except Exception as e:
+                    print(f"[Prefetch Error] {e}")
+
+    async def play_next_song(self, voice_client, guild_id, channel=None, current_song=None):
+        if self.is_stopping.get(guild_id, False):
+            self.is_stopping[guild_id] = False
+            return
+        
+        if channel is None:
+            channel = self.TEXT_CHANNELS.get(guild_id)
 
         if self.is_processing.get(guild_id, False):
             return
 
         self.is_processing[guild_id] = True
-        
         loop_state = self.LOOP_STATES.get(guild_id, "off")
         
-        # current_song format is (web_url, title, thumb)
+        # Handle current_song format: (web_url, title, thumb)
+        stream_url = None
         if loop_state == "single" and current_song:
-            web_url, title, thumb = current_song
-        elif self.SONG_QUEUES.get(guild_id):
-            web_url, title, thumb = self.SONG_QUEUES[guild_id].popleft()
+            web_url, title, thumb = current_song[:3]
+            if len(current_song) == 4:
+                stream_url = current_song[3]
+        elif self.SONG_QUEUES.get(guild_id) and len(self.SONG_QUEUES[guild_id]) > 0:
+            song_data = self.SONG_QUEUES[guild_id].popleft()
+            web_url, title, thumb = song_data[:3]
+            if len(song_data) == 4:
+                stream_url = song_data[3]
         else:
-            self.bot.loop.create_task(channel.send("👀 **Queue is empty**"))
+            self.is_processing[guild_id] = False
+            if channel:
+                self.bot.loop.create_task(channel.send("👀 **Queue is empty**"))
             self.start_inactivity_timer(guild_id, voice_client, channel, "Queue is empty.")
             return
 
@@ -160,44 +198,41 @@ class MusicCog(commands.Cog):
             "quiet": True,
             "ignoreerrors": True,
             "nocheckcertificate": True,
+            "no_warnings": True,
+            "skip_download": True,
         }
             
         try:
             loop = asyncio.get_running_loop()
             info = await loop.run_in_executor(None, _extract, web_url, ydl_option)
-            
             if info is None:
                 raise Exception("Video is unavailable.")
-            
             if 'entries' in info and info['entries']:
                 info = info['entries'][0]
-                
             stream_url = info.get('url')
             if not stream_url:
                 raise Exception("Stream URL could not be extracted.")
-                
             title = info.get('title', title)
             thumb = info.get('thumbnail', thumb)
-            
-            # Save the original web URL so it can be re-fetched when looping
-            valid_song = (web_url, title, thumb)
-            
         except Exception as e:
             print(f"[Queue Error] Extraction failed: {e}")
+            self.is_processing[guild_id] = False
             if channel:
-                await channel.send(f"⚠️ Skipping **{title}** (Video unavailable or restricted).")
+                self.bot.loop.create_task (channel.send(f"⚠️ Skipping **{title}** (Video unavailable or restricted)."))
             self.bot.loop.create_task(self.play_next_song(voice_client, guild_id, channel, None))
             return
 
+        valid_song = (web_url, title, thumb)
+
         # If loopall is active, push the metadata back to the end of the queue
         if loop_state == "all":
-            self.SONG_QUEUES[guild_id].append(valid_song)
+            self.SONG_QUEUES[guild_id].append((web_url, title, thumb))
             
         if loop_state != "single" and channel:
             embed = discord.Embed(title="🎶 Now Playing", description=f"**{title}**", color=discord.Color.blue())
             if thumb:
                 embed.set_thumbnail(url=thumb)
-            asyncio.create_task(channel.send(embed=embed))
+            self.bot.loop.create_task(channel.send(embed=embed))
         
         ffmpeg_options = {
             "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
@@ -207,19 +242,26 @@ class MusicCog(commands.Cog):
         source = discord.FFmpegPCMAudio(stream_url, **ffmpeg_options, executable="C:/Users/RehangXD/Music/DiscordBot/bin/ffmpeg/ffmpeg.exe")
         
         def after_play(error):
+            self.is_processing[guild_id] = False
             if error:
                 print(f"[Audio Error] Issue playing {title}: {error}")
             try:
                 self.bot.loop.create_task(self.play_next_song(voice_client, guild_id, channel, valid_song))
             except Exception as e:
                 print(f"[System Error] Failed to schedule next song: {e}")
-        
+
+        self.is_processing[guild_id] = False
         voice_client.play(source, after=after_play)
 
     @commands.hybrid_command(name="play", description="Play a song or add it to the queue.")
     @app_commands.describe(query="The YouTube URL, Spotify URL, or search term.")
     async def play(self, ctx: commands.Context, *, query: str):
-        await ctx.defer()
+        if ctx.interaction:
+            if not ctx.interaction.response.is_done():
+                try:
+                    await ctx.defer()
+                except discord.NotFound:
+                    return
 
         voice_channel = ctx.author.voice.channel if ctx.author.voice else None
         if voice_channel is None:
@@ -292,14 +334,10 @@ class MusicCog(commands.Cog):
                 for entry in raw_entries:
                     if entry:
                         web_url = entry.get("url") or entry.get("webpage_url") or entry.get("id")
-                        
-                        # Safety fix: yt-dlp flat extraction sometimes returns only the video ID 
-                        # instead of the full URL. We must convert it to a full link.
                         if web_url and not web_url.startswith("http"):
                             web_url = f"https://www.youtube.com/watch?v={web_url}"
                             
                         title = entry.get("title", "Untitled")
-                        
                         thumb = None
                         if entry.get("thumbnails"):
                             thumb = entry["thumbnails"][0].get("url")
@@ -369,16 +407,10 @@ class MusicCog(commands.Cog):
         voice_client = ctx.guild.voice_client
         if voice_client and voice_client.is_playing():
             voice_client.pause()
-            embed = discord.Embed(
-                description="⏸️ Music paused.",
-                color=discord.Color.red()
-            )
+            embed = discord.Embed(description="⏸️ Music paused.",color=discord.Color.red())
             await ctx.send(embed=embed)
         else:
-            embed = discord.Embed(
-                description="There is no song currently playing.",
-                color=discord.Color.red()
-            )
+            embed = discord.Embed(description="There is no song currently playing.",color=discord.Color.red())
             await ctx.send(embed=embed)
     
     @commands.hybrid_command(name="resume", description="Resume a paused song.")
@@ -403,7 +435,9 @@ class MusicCog(commands.Cog):
         guild_id = str(ctx.guild.id)
         voice_client = ctx.guild.voice_client
         
-        if voice_client:
+        if voice_client and voice_client.is_connected():
+            self.is_stopping[guild_id] = True
+            
             if guild_id in self.SONG_QUEUES:
                 self.SONG_QUEUES[guild_id].clear()
             self.LOOP_STATES[guild_id] = "off"
@@ -412,7 +446,6 @@ class MusicCog(commands.Cog):
             if voice_client.is_playing() or voice_client.is_paused():
                 voice_client.stop()
             
-            voice_client.stop()
             await voice_client.disconnect()
             embed = discord.Embed(
                 description="⏹️ Music stopped and queue cleared.",
