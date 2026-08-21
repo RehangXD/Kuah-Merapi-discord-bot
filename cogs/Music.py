@@ -249,7 +249,7 @@ class MusicCog(commands.Cog):
             "extract_flat": "in_playlist",
             "noplaylist": False,
             "ignoreerrors": True,
-            "playlistend": 150 # Max limit of playlist songs to extract
+            "playlistend": 250 # Max limit of playlist songs to extract
         }
 
         if is_spotify:
@@ -283,13 +283,13 @@ class MusicCog(commands.Cog):
             first_thumb = None
             
             if "entries" in results:
-                entries = list(results["entries"])
+                raw_entries = results["entries"]
                 
                 # If it's a search term (not a playlist link), only queue the top result
-                if not is_link and len(entries) > 0:
-                    entries = [entries[0]]
+                if not is_link:
+                    raw_entries = [next(iter(raw_entries), None)]
                     
-                for entry in entries:
+                for entry in raw_entries:
                     if entry:
                         web_url = entry.get("url") or entry.get("webpage_url") or entry.get("id")
                         
@@ -311,6 +311,9 @@ class MusicCog(commands.Cog):
                             
                         self.SONG_QUEUES[guild_id].append((web_url, title, thumb))
                         added_count += 1
+
+                        if added_count == 1 and not voice_cilent.is_playing() and not voice_client.is_paused():
+                            await self.play_next_song(voice_client, guild_id, ctx.channel)
             else:
                 web_url = results.get("url") or results.get("webpage_url") or results.get("id")
                 if web_url and not web_url.startswith("http"):
@@ -330,7 +333,7 @@ class MusicCog(commands.Cog):
             else:
                 await ctx.send("No valid tracks could be extracted.")
     
-        if not voice_client.is_playing() and not voice_client.is_paused():
+        if not voice_client.is_playing() and not voice_client.is_paused() and len(self.SONG_QUEUE[guild_id]) > 0:
             await self.play_next_song(voice_client, guild_id, ctx.channel)
             
     @commands.hybrid_command(name="skip", description="Skip the current playing song.")
