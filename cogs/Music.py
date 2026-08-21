@@ -312,7 +312,7 @@ class MusicCog(commands.Cog):
                         self.SONG_QUEUES[guild_id].append((web_url, title, thumb))
                         added_count += 1
 
-                        if added_count == 1 and not voice_cilent.is_playing() and not voice_client.is_paused():
+                        if added_count == 1 and not voice_client.is_playing() and not voice_client.is_paused():
                             await self.play_next_song(voice_client, guild_id, ctx.channel)
             else:
                 web_url = results.get("url") or results.get("webpage_url") or results.get("id")
