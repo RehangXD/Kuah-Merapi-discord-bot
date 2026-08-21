@@ -116,6 +116,15 @@ class MusicCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
+        if member.id == self.bot.user.id and before.channel is not None and after.channel is None:
+            guild_id = str(member.guild.id)
+            print(f"[Voice Event] Bot disconnected from voice channel in guild {guild_id}")
+            self.cancel_inactivity_timer(guild_id)
+            self.LOOP_STATES[guild_id] = "off"
+            if guild_id in self.is_processing:
+                self.is_processing[guild_id] = False
+            return
+        
         if member.bot:
             return
 
@@ -155,7 +164,7 @@ class MusicCog(commands.Cog):
                         info = info['entries'][0]
                     stream_url = info.get('url') if info else None
                     if stream_url and len(self.SONG_QUEUES[guild_id]) > 0 and self.SONG_QUEUES[guild_id][0][0] == web_url:
-                        self.SONG_QUEUES[guild_id][0] = (web_url, title, thumb, stream_url)
+                        self.SONG_QUEUES[guild_id][0] = (web_url, title, tumb, stream_url)
                 except Exception as e:
                     print(f"[Prefetch Error] {e}")
 
@@ -172,6 +181,17 @@ class MusicCog(commands.Cog):
 
         self.is_processing[guild_id] = True
         loop_state = self.LOOP_STATES.get(guild_id, "off")
+
+        if not voice_client or not voice_client.is_connected():
+            guild = self.bot.get_guild(int(guild_id))
+            if guild and guild.voice_client and guild.voice_client.is_connected():
+                voice_client = guild.voice_client
+            else:
+                print(f"[Play Error] Voice client disconected unexpectedly for guild {guild_id}")
+                self.is_processing[guild_id] = False
+                if channel:
+                    self.bot.loop.create_task(channel.send("⚠️ **Voice connection lost.** Please use `/play` again."))
+                return
         
         # Handle current_song format: (web_url, title, thumb)
         stream_url = None
@@ -269,8 +289,15 @@ class MusicCog(commands.Cog):
             return
     
         voice_client = ctx.guild.voice_client
-        if voice_client is None:
-            voice_client = await voice_channel.connect()
+        if voice_client is None or not voice_client.is_connected():
+            try:
+                if voice_client:
+                    await voice_client.disconnect(force=True)
+                voice_client = await voice_channel.connect(reconnect=True, timeout=20.0)
+            except Exception as e:
+                print(f"[Voice Connect Error] {e}")
+                await ctx.send("❌ Failed to connect to the voice channel. Please try again.")
+                return
         elif voice_channel != voice_client.channel:
             await voice_client.move_to(voice_channel)
     
