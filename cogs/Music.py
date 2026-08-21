@@ -401,6 +401,25 @@ class MusicCog(commands.Cog):
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
+
+    @commands.hybrid_command(name="skipall", description="Clear all song from the queue.")
+    async def skipall(self, ctx: commands.Context):
+        guild_id = str(ctx.guild.id)
+
+        if guild_id in self.SONG_QUEUES and len(self.SONG_QUEUES[guild_id]) > 0:
+            self.SONG_QUEUES[guild_id].clear()
+            embed = discord.Embed(
+                title="Queue Clear",
+                description="**All songs have been removed from queue.**",
+                color=discord.Color.Green()
+            )
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                description="❌ The queue is already empty.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
     
     @commands.hybrid_command(name="pause", description="Pause the current song.")
     async def pause(self, ctx: commands.Context):
