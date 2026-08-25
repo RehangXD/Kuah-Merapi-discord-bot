@@ -243,10 +243,6 @@ class MusicCog(commands.Cog):
             return
 
         valid_song = (web_url, title, thumb)
-
-        # If loopall is active, push the metadata back to the end of the queue
-        if loop_state == "all":
-            self.SONG_QUEUES[guild_id].append((web_url, title, thumb))
             
         if loop_state != "single" and channel:
             embed = discord.Embed(title="🎶 Now Playing", description=f"**{title}**", color=discord.Color.blue())
@@ -265,6 +261,12 @@ class MusicCog(commands.Cog):
             self.is_processing[guild_id] = False
             if error:
                 print(f"[Audio Error] Issue playing {title}: {error}")
+
+            # If loopall is active, push the metadata back to the end of the queue
+            current_loop_state = self.LOOP_STATES.get(guild_id, "off")
+            if current_loop_state == "all" and valid_song:
+                self.SONG_QUEUES[guild_id].append(valid_song[:3])
+                
             try:
                 self.bot.loop.create_task(self.play_next_song(voice_client, guild_id, channel, valid_song))
             except Exception as e:
