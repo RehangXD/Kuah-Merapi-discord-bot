@@ -292,10 +292,14 @@ class MusicCog(commands.Cog):
     
         voice_client = ctx.guild.voice_client
         if voice_client is None or not voice_client.is_connected():
-            try:
-                if voice_client:
+            if voice_client is not None:
+                try:
                     await voice_client.disconnect(force=True)
-                voice_client = await voice_channel.connect(reconnect=True, timeout=20.0)
+                except Exception as e:
+                    print(f"[Voice Cleanup Error] {e}")
+
+            try:
+                voice_client = await voice_channel.connect(reconnect=True, timeout=30.0)
             except Exception as e:
                 print(f"[Voice Connect Error] {e}")
                 await ctx.send("❌ Failed to connect to the voice channel. Please try again.")
