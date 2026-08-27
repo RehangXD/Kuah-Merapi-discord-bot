@@ -121,8 +121,8 @@ class MusicCog(commands.Cog):
             print(f"[Voice Event] Bot disconnected from voice channel in guild {guild_id}")
             self.cancel_inactivity_timer(guild_id)
             self.LOOP_STATES[guild_id] = "off"
-            if guild_id in self.is_processing:
-                self.is_processing[guild_id] = False
+            self.is_processing[guild_id] = False
+            self.is_stopping[guild_id] = False
             return
         
         if member.bot:
