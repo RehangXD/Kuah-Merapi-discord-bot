@@ -252,7 +252,7 @@ class MusicCog(commands.Cog):
         
         ffmpeg_options = {
             "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-            "options": "-vn",
+            "options": "-vn -acodec pcm_s16le -ar 48000 -ac 2",
         }
                 
         source = discord.FFmpegPCMAudio(stream_url, **ffmpeg_options, executable="C:/Users/RehangXD/Music/DiscordBot/bin/ffmpeg/ffmpeg.exe")
@@ -273,7 +273,8 @@ class MusicCog(commands.Cog):
                 print(f"[System Error] Failed to schedule next song: {e}")
 
         self.is_processing[guild_id] = False
-        voice_client.play(source, after=after_play)
+        audio_source = discord.PCMVolumeTransformer(source, volume=1.0)
+        voice_client.play(audio_source, after=after_play)
 
     @commands.hybrid_command(name="play", description="Play a song or add it to the queue.")
     @app_commands.describe(query="The YouTube URL, Spotify URL, or search term.")
