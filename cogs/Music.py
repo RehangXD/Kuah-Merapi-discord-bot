@@ -445,7 +445,7 @@ class MusicCog(commands.Cog):
             embed = discord.Embed(
                 title="Queue Clear",
                 description="**All songs have been removed from queue.**",
-                color=discord.Color.Green()
+                color=discord.Color.green()
             )
             await ctx.send(embed=embed)
         else:
