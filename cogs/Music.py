@@ -292,23 +292,34 @@ class MusicCog(commands.Cog):
             return
     
         voice_client = ctx.guild.voice_client
-        if voice_client is None or not voice_client.is_connected():
-            if voice_client is not None:
+        guild_id = str(ctx.guild.id)
+
+        queue_is_empty = not self.SONG_QUEUES.get(guild_id) or len(self.SONG_QUEUES[guild_id]) == 0
+
+        if voice_client:
+            is_idle = not voice_client.is_playing() and not voice_client.is_paused() and queue_is_empty
+            if not voice_client.is_connected() or is_idle:
                 try:
                     await voice_client.disconnect(force=True)
                 except Exception as e:
                     print(f"[Voice Cleanup Error] {e}")
 
+                try:
+                    voice_client = await voice_channel.connect(reconnect=True, timeout=30.0)
+                except Exception as e:
+                    print(f"[Voice Connect Error] {e}")
+                    await ctx.send("❌ Failed to connect to the voice channel. Please try again.")
+                    return
+            elif voice_channel != voice_client.channel:
+                await voice_client.move_to(voice_channel)
+        else:
             try:
                 voice_client = await voice_channel.connect(reconnect=True, timeout=30.0)
             except Exception as e:
                 print(f"[Voice Connect Error] {e}")
-                await ctx.send("❌ Failed to connect to the voice channel. Please try again.")
+                await ctx.send("Failed to connect to the voice channel. Please try again.")
                 return
-        elif voice_channel != voice_client.channel:
-            await voice_client.move_to(voice_channel)
     
-        guild_id = str(ctx.guild.id)
         self.TEXT_CHANNELS[guild_id] = ctx.channel
         self.cancel_inactivity_timer(guild_id)
         
@@ -439,18 +450,27 @@ class MusicCog(commands.Cog):
     @commands.hybrid_command(name="skipall", description="Clear all song from the queue.")
     async def skipall(self, ctx: commands.Context):
         guild_id = str(ctx.guild.id)
+        voice_client = ctx.guild.voice_client
 
-        if guild_id in self.SONG_QUEUES and len(self.SONG_QUEUES[guild_id]) > 0:
-            self.SONG_QUEUES[guild_id].clear()
+        if voice_client and voice_client.is_connected():
+            self.is_stopping[guild_id] = True
+            
+            if guild_id in self.SONG_QUEUES:
+                self.SONG_QUEUES[guild_id].clear()
+            self.LOOP_STATES[guild_id] = "off"
+
+            if voice_client.is_playing() or voice_client.is_paused():
+                voice_client.stop()
+
             embed = discord.Embed(
-                title="Queue Clear",
-                description="**All songs have been removed from queue.**",
+                title="Queue Clear & Stopped",
+                description="🗑️ **Cleared all queued songs and stopped playback.**",
                 color=discord.Color.green()
             )
             await ctx.send(embed=embed)
         else:
             embed = discord.Embed(
-                description="❌ The queue is already empty.",
+                description="❌ There are no songs playing or in the queue.",
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
@@ -549,6 +569,34 @@ class MusicCog(commands.Cog):
             embed = discord.Embed(
                 description="🔁 Queue loop enabled.",
                 color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
+
+    @commands.hybrid_command(name="reset", description="Force reset the voice connection and clear all states.")
+    async def reset(self, ctx: commands.Context):
+        guild_id = str(ctx.guild.id)
+        voice_client = ctx.guild.voice_client
+        
+        lock = self.get_lock(guild_id)
+        
+        async with lock:
+            if voice_client:
+                try:
+                    await voice_client.disconnect(force=True)
+                except Exception:
+                    pass
+                
+            if guild_id in self.SONG_QUEUES:
+                self.SONG_QUEUES[guild_id].clear()
+                
+            self.is_processing[guild_id] = False
+            self.is_stopping[guild_id] = False
+            self.LOOP_STATES[guild_id] = "off"
+            self.cancel_inactivity_timer(guild_id)
+            
+            embed = discord.Embed(
+                description="Voice connection and queues have been forcefully reset.",
+                color=discord.Color.green()
             )
             await ctx.send(embed=embed)
 
