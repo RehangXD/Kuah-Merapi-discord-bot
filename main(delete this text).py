@@ -83,6 +83,14 @@ async def reload(interaction: discord.Interaction):
 
     if not success_messages:
         success_messages.append(f"No config items processed.")
+
+    if TESTING_MODE:
+            bot.tree.copy_global_to(guild=MY_GUILD)
+            await bot.tree.sync(guild=MY_GUILD)
+            success_messages.append("Synced to Test Server.")
+        else:
+            await bot.tree.sync(guild=None)
+            success_messages.append("Synced Globally.")
             
     await interaction.followup.send(" | ".join(success_messages))
 
