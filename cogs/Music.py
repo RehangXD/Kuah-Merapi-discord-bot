@@ -5,6 +5,7 @@ from discord import app_commands
 import yt_dlp
 import asyncio
 from collections import deque
+from collections import defaultdict
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
@@ -21,6 +22,7 @@ class MusicCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.module_name = "Music"
+        self.locks = defaultdict(asyncio.Lock)
         self.SONG_QUEUES = {}
         self.LOOP_STATES = {}
         self.TEXT_CHANNELS = {}
@@ -32,6 +34,9 @@ class MusicCog(commands.Cog):
             client_id=os.getenv("SPOTIPY_CLIENT_ID"),
             client_secret=os.getenv("SPOTIPY_CLIENT_SECRET")
         ))
+
+    def get_lock(self, guild_id:str):
+        return self.locks[guild_id]
 
     def _get_spotify_tracks_sync(self, url: str) -> list:
         tracks_data = []
