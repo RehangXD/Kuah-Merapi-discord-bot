@@ -29,12 +29,21 @@ class GeneralCog(commands.Cog):
         
         await ctx.send(random_answer)
 
-        @commands.Cog.listener()
-        async def on_message(self, message):
-            if not MODULE_TOGGLES.get(self.module_name, True):
-                return
-            if message.author.bot:
-                return
+    @commands.hybrid_command(name="specs", description="PC specification.")
+    async def specs(self, ctx: commands.Context):
+            embed = discord.Embed(
+            description="CPU : AMD" \
+            "RAM : 16",
+            color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if not MODULE_TOGGLES.get(self.module_name, True):
+            return
+        if message.author.bot:
+            return
 
 
 # This function is needed for main.py to know how to reload this files

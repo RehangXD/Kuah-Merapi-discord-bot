@@ -11,6 +11,7 @@ class GreetingCog(commands.Cog):
     self.module_name = "Greeting" 
 
     self.greeting_map = {
+        "BOT": ["APA BOT"],
         "bot": ["apa bot", "bot", "APA",
         ],    
         "casual": [
@@ -70,6 +71,8 @@ class GreetingCog(commands.Cog):
         ],
         "p": ["p", "P",
         ],
+        "P": ["P"
+        ],
         "apa_kabar_mu": ["iya baik, bagaimana dengan mu?",
         ],
         "iya_baik_juga": ["alhamdullilah/syukurlah kalo begitu", 
@@ -79,6 +82,7 @@ class GreetingCog(commands.Cog):
 
     }
     self.trigger_map = {
+        "BOT": ["P BOT", "BOT"],
         "bot": ["bot", "Bot",
         ],
         "casual": ["halo kuah merapi", "hai kuah merapi", "yoo kuah merapi", "p kuah merapi", 
@@ -89,21 +93,29 @@ class GreetingCog(commands.Cog):
         "formal": ["permisi kuah merapi", "bantuan kuah merapi", "info kuah merapi", "permisi kuah merapi", 
                    "bantuan kuah", "info kuah", "permisi bot", "bantuan bot", "info bot", 
         ],
-        "time_based_pagi": ["selamat pagi kuah merapi", "selamat pagi kuah", "selamat pagi bot", "pagi kuah merapi", "pagi kuah", "pagi bot" 
+        "time_based_pagi": ["selamat pagi kuah merapi", "selamat pagi kuah", "selamat pagi bot", "pagi kuah merapi", "pagi kuah", "pagi bot",
+                            "Selamat pagi kuah merapi", "Selamat pagi kuah", "Selamat pagi bot", "Pagi kuah merapi", "Pagi kuah", "Pagi bot"
         ],
         "time_based_siang": ["selamat siang kuah merapi", "selamat siang kuah", "selamat siang bot", "siang kuah merapi", "siang kuah", "siang bot",
+                             "Selamat siang kuah merapi", "Selamat siang kuah", "Selamat siang bot", "Siang kuah merapi", "Siang kuah", "Siang bot"
         ],
         "time_based_sore": ["selamat sore kuah merapi", "selamat sore kuah", "selamat sore bot", "sore kuah merapi", "sore kuah", "sore bot",
+                            "Selamat sore kuah merapi", "Selamat sore kuah", "Selamat sore bot", "Sore kuah merapi", "Sore kuah", "Sore bot"
         ],
-        "time_based_malam": ["selamat malam kuah merapi", "selamat malam kuah", "selamat malam bot", "malam kuah merapi", "malam kuah", "malam bot"
+        "time_based_malam": ["selamat malam kuah merapi", "selamat malam kuah", "selamat malam bot", "malam kuah merapi", "malam kuah", "malam bot",
+                             "Selamat malam kuah merapi", "Selamat malam kuah", "Selamat malam bot", "Malam kuah merapi", "Malam kuah", "Malam bot"
         ],
         "islamic": ["assalamualaikum kuah merapi", "assalamu'alaikum kuah merapi", "assalamualaikum kuah", "assalamu'alaikum kuah", 
-                    "assalamualaikum bot", "assalamu'alaikum bot", 
+                    "assalamualaikum bot", "assalamu'alaikum bot",
+                    "Assalamualaikum kuah merapi", "Assalamu'alaikum kuah merapi", "Assalamualaikum kuah", "Assalamu'alaikum kuah", 
+                    "Assalamualaikum bot", "Assalamu'alaikum bot",
         ],
-        "p": ["p", "P", 
+        "p": ["p" 
+        ],
+        "P": ["P"
         ],
         "apa_kabar_mu": ["apa kabar mu", "apa kabar bot",
-                         "Apa kabar mu", 
+                         "Apa kabar mu", "Apa kabar bot",
         ],
         "iya_baik_juga": ["iya baik juga", "Iya baik juga", 
         ],
