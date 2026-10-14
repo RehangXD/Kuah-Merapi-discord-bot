@@ -1,8 +1,8 @@
-import discord
+lazy import discord
 from discord.ext import commands
 from discord import app_commands
-import aiohttp
-import json
+lazy import aiohttp
+lazy import json
 from Config import MODULE_TOGGLES
 
 class OllamaCog(commands.Cog):

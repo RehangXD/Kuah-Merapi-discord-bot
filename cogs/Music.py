@@ -1,12 +1,12 @@
-import os
-import discord
+lazy import os
+lazy import discord
 from discord.ext import commands
 from discord import app_commands
-import yt_dlp
-import asyncio
+lazy import yt_dlp
+lazy import asyncio
 from collections import deque
 from collections import defaultdict
-import spotipy
+lazy import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 from urllib.parse import urlparse

@@ -1,7 +1,7 @@
-import discord
+lazy import discord
 from discord.ext import commands
 from discord import Interaction, app_commands
-import random
+lazy import random
 from Config import MODULE_TOGGLES
 
 class GeneralCog(commands.Cog):

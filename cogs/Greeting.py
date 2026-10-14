@@ -1,5 +1,5 @@
-import random
-import discord
+lazy import random
+lazy import discord
 from discord.ext import commands
 from Config import MODULE_TOGGLES
 
