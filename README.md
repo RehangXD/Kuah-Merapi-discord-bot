@@ -84,6 +84,13 @@ SPOTIPY_CLIENT_SECRET=your_secret
 python main.py
 ```
 
+## Update all the libraries
+
+**Bash**
+```
+pip install --upgrade -r requirements.txt
+```
+
 ## Configuration
 You can toggle modules on or off by editing Config.py:
 
